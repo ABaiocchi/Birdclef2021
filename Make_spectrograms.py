@@ -88,11 +88,49 @@ def make_csv(path):
     return data_dict
 
 
+def find_nocall_image(folder):
+    eps = 25
+    window = 10
+    subfolder_fpath = os.path.join(path, folder)  # path of the subfolder
+    f = open(
+        os.path.join(subfolder_fpath, "noise.txt"),
+        "w+",
+    )
+    images_path = Path(subfolder_fpath).glob("*.png")  # path of the image
+    for image in images_path:
+        maxim = torch.zeros(128)
+        tens_image = torch.Tensor(imageio.imread(image))  # [128,385]
+        for i in range(385 - 2 * window):
+            diff = abs(
+                torch.sub(
+                    torch.sum(tens_image[:, i : i + window], dim=1) / window,
+                    torch.sum(tens_image[:, i + window : i + window * 2], dim=1)
+                    / window,
+                )
+            )
+            maxim[diff > maxim] = diff[diff > maxim]
+        if max(maxim) < eps:
+            # print(str(image))
+            f.write(str(image))
+            f.write("\n")
+            # os.remove(image)
+    f.close()
+
+
+
 #Produci spettrogrammi
 
 #path = "train_short_audio/"
 #results = Parallel(n_jobs=12)(
 #    delayed(audio_to_png)(path) for path in tqdm.tqdm(os.listdir(path))
+#)
+
+
+#Trova file senza chiamate
+
+#path = "train_short_audio"
+#results = Parallel(n_jobs=-1)(
+#    delayed(find_nocall_image)(fold) for fold in tqdm.tqdm(os.listdir(path))
 #)
 
 
@@ -102,3 +140,4 @@ def make_csv(path):
 #data = make_csv(path)
 #df = pd.DataFrame.from_dict(data)
 #df.to_csv("classes_audio.csv", index=False, header=False)
+
